@@ -30,10 +30,11 @@ import {
     allUpperWordStyle,
     allLowerWordStyle
 } from "../Strings";
-import { defined, assertNever } from "../Support";
+import { defined, assertNever, panic } from "../Support";
 import { ConvenienceRenderer } from "../ConvenienceRenderer";
 import { StringOption, EnumOption, BooleanOption } from "../RendererOptions";
 import { assert } from "../Support";
+import { Declaration } from "../DeclarationIR";
 
 type NamingStyle = "pascal" | "camel" | "underscore" | "upper-underscore";
 
@@ -597,12 +598,32 @@ class CPlusPlusRenderer extends ConvenienceRenderer {
         }
     };
 
+    private emitDeclaration(decl: Declaration): void {
+        if (decl.kind === "forward") {
+            this.emitLine("// forward ", this.nameForNamedType(decl.type));
+        } else if (decl.kind === "define") {
+            const t = decl.type;
+            const name = this.nameForNamedType(t);
+            if (t instanceof ClassType) {
+                this.emitClass(t, name);
+            } else if (t instanceof EnumType) {
+                this.emitEnum(t, name);
+            } else if (t instanceof UnionType) {
+                this.emitUnionTypedefs(t, name);
+            } else {
+                return panic(`Cannot declare type ${t.kind}`);
+            }
+        } else {
+            return assertNever(decl.kind);
+        }
+    }
+
     private emitTypes = (): void => {
         if (!this._justTypes) {
             this.emitLine("using nlohmann::json;");
             this.ensureBlankLine();
         }
-        this.forEachNamedType("interposing", this.emitClass, this.emitEnum, this.emitUnionTypedefs);
+        this.forEachDeclaration("interposing", decl => this.emitDeclaration(decl));
         if (this._justTypes) return;
         this.forEachTopLevel("leading", this.emitTopLevelTypedef, t => !this.namedTypeToNameForTopLevel(t));
         this.emitMultiline(`

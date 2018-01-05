@@ -19,7 +19,7 @@ import { defined, panic, nonNull } from "./Support";
 import { Sourcelike, sourcelikeToSource, serializeRenderResult } from "./Source";
 
 import { trimEnd } from "lodash";
-import { declarationsForGraph, DeclarationIR, cycleBreakerTypesForGraph } from "./DeclarationIR";
+import { declarationsForGraph, DeclarationIR, cycleBreakerTypesForGraph, Declaration } from "./DeclarationIR";
 
 export abstract class ConvenienceRenderer extends Renderer {
     protected globalNamespace: Namespace;
@@ -344,6 +344,10 @@ export abstract class ConvenienceRenderer extends Renderer {
             f(t, defined(this._topLevelNames.get(name)))
         );
     };
+
+    protected forEachDeclaration(blankLocations: BlankLineLocations, f: (decl: Declaration) => void) {
+        this.forEachWithBlankLines(this._declarationIR.declarations, blankLocations, f);
+    }
 
     setAlphabetizeProperties = (value: boolean): void => {
         this._alphabetizeProperties = value;
